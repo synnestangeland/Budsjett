@@ -272,7 +272,10 @@ const DEF_CATS = [
 const EMOJIS = {Mat:'🛒',Husholdning:'🏠',Shopping:'🛍️','Katten Luna':'🐱',Transport:'🚗',
   Regninger:'📄',Helse:'💊',Underholdning:'🎭',Diverse:'✨',Lønn:'💼',Barnetrygd:'👶',
   Tilbakebetaling:'↩️',Sparing:'🐷',Gave:'🎁',Bonus:'⭐',Kaffe:'☕',Trening:'🏋️',Reise:'✈️'};
-const emo = c => EMOJIS[c] || '💸';
+const emo = (c, storedEmoji) => {
+  if (storedEmoji) return storedEmoji;
+  return EMOJIS[c] || '💸';
+};
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
 const fmt = n => new Intl.NumberFormat('nb-NO',{style:'currency',currency:'NOK',maximumFractionDigits:0}).format(n||0);
 const today = () => new Date().toISOString().slice(0,10);
@@ -746,7 +749,7 @@ function renderGoals() {
 function renderCategories() {
   const rowsHtml = state.categories.map(c=>`
     <div class="tx-row" onclick="editCategory('${c.id}')" style="cursor:pointer">
-      <div class="tx-ico" style="font-size:22px">${emo(c.name)}</div>
+      <div class="tx-ico" style="font-size:22px">${emo(c.name, c.emoji)}</div>
       <div class="tx-info"><div class="tx-name">${c.name}</div></div>
       <span style="color:var(--n4);font-size:18px">›</span>
     </div>`).join('');
@@ -1017,9 +1020,17 @@ function openAddCategory() { state.editingCat=null; showCatModal(); }
 function editCategory(id)  { state.editingCat=state.categories.find(c=>c.id===id); showCatModal(); }
 function showCatModal() {
   const c = state.editingCat;
+  const EMOJIS = ['🛒','🏠','🛍️','🐱','🚗','📄','💊','🎭','✨','☕','🍕','🍷','🎮','📚','🏋️','✈️','🎁','💄','👗','🐶','🌸','💅','🎵','🏖️','🍦','🧴','🌿','💻','📱','🎓'];
+  const currentEmoji = c?.emoji || '✨';
   document.getElementById('modal-cat-title').textContent = c ? 'Rediger kategori' : 'Ny kategori';
   document.getElementById('modal-cat-body').innerHTML = `
-    <div class="ig"><label class="lbl">Navn</label><input id="cat-name" class="inp" placeholder="f.eks. Kaffe ☕" value="${c?.name||''}" autofocus></div>
+    <div class="ig">
+      <label class="lbl">Emoji</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px" id="cat-emo-grid">
+        ${EMOJIS.map(e => `<div onclick="selectChip(this,'cat-emo-grid')" class="chip${currentEmoji===e?' sel':''}" style="font-size:20px;padding:6px 10px">${e}</div>`).join('')}
+      </div>
+    </div>
+    <div class="ig"><label class="lbl">Navn</label><input id="cat-name" class="inp" placeholder="f.eks. Kaffe" value="${c?.name||''}" autofocus></div>
     <button class="btn btn-p" onclick="saveCat()">Lagre</button>
     ${c?`<button class="btn btn-d" style="margin-top:10px" onclick="deleteCat('${c.id}')">Slett</button>`:''}
     <button class="btn btn-s" style="margin-top:10px" onclick="closeModal('modal-cat')">Avbryt</button>`;
@@ -1028,7 +1039,9 @@ function showCatModal() {
 function saveCat() {
   const name = document.getElementById('cat-name')?.value?.trim();
   if (!name) { showToast('Angi et navn'); return; }
-  const c = { id:state.editingCat?.id||uid(), name };
+  const emoEl = document.querySelector('#cat-emo-grid .chip.sel');
+  const emoji = emoEl ? emoEl.textContent.trim() : '✨';
+  const c = { id:state.editingCat?.id||uid(), name, emoji };
   const idx = state.categories.findIndex(x=>x.id===c.id);
   if (idx>=0) state.categories[idx]=c; else state.categories.push(c);
   dbPut('categories', c);
@@ -1141,3 +1154,4 @@ init();
 </script>
 </body>
 </html>
+
